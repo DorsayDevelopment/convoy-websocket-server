@@ -49,7 +49,7 @@ class ConvoyConnection {
   }
 
   _onError() {
-    console.error('ERROR!!!!');
+    console.error('Websocket ERROR!!!!');
   }
 
   _rabbitConsumer(message) {

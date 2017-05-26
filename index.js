@@ -16,7 +16,7 @@ function publishEvent(channel, user, data) {
   channel.publish(EXCHANGE.EVENT, `${user}.event`, new Buffer(JSON.stringify(data)));
 }
 
-async function getChannel(connectionString) {
+async function setupRabbit(connectionString) {
   const exchangeOptions = {
     durable: true
   }
@@ -28,6 +28,32 @@ async function getChannel(connectionString) {
   channel.publishEvent = publishEvent.bind(null, channel);
 
   return channel;
+}
+
+function getChannel(connectionString, maxTries=0) {
+  let tries = 0;
+
+  return new Promise((resolve, reject) => {
+    const retry = setInterval(() => {
+      console.log(`Attemping rabbitmq connection try ${++tries} of ${maxTries || 'infinite'}...`);
+
+      setupRabbit(connectionString)
+        .then((channel) => {
+          clearInterval(retry);
+          resolve(channel);
+        })
+        .catch((err) => {
+          if (maxTries > 0 && tries >= maxTries) {
+            console.log('Maximum tries reached. Aborting...')
+            clearInterval(retry);
+            reject(err);
+          }
+        });
+    }, 2000);
+  });
+}
+
+async function getChannel(connectionString) {
 }
 
 async function main() {
@@ -46,6 +72,8 @@ async function main() {
   wss.on('listening', function listening() {
     logger('Server listening...');
   });
+
+  logger('Websocket server started');
 }
 
 main();
